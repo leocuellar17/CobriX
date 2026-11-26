@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CobriX — Gestión de Cuentas de Cobro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/fluent-clay.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module" src="/static/js/app.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="antialiased selection:bg-[#0078D4]/20" x-data="cobrixApp()" x-init="init()">
+
+    <!-- Contenedor Principal -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- BARRA SUPERIOR (HEADER FLUENT) -->
+        <header class="clay-card p-5 sm:p-6">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+                <!-- Identidad -->
+                <div class="flex items-center gap-4">
+                    <div class="w-13 h-13 p-3 rounded-2xl bg-[#0078D4] text-white shadow-lg shadow-[#0078D4]/30 flex items-center justify-center">
+                        <i data-lucide="file-check-2" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                            Gestión de Cuentas de Cobro
+                        </h1>
+                        <p class="text-sm text-slate-600 flex items-center gap-1.5 mt-0.5">
+                            <i data-lucide="user-check" class="w-4 h-4 text-[#0078D4]"></i>
+                            <span x-text="emisor.nombre_completo || 'Cargando perfil...'"></span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Selector de Mes Activo y Botón Rápido de Carpeta -->
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-1 bg-slate-100/80 p-1.5 rounded-2xl border border-white shadow-inner">
+                        <button
+                            type="button"
+                            @click="cambiarPeriodo(-1)"
+                            class="clay-btn clay-btn-secondary px-2.5 py-2 !rounded-xl"
+                            title="Mes anterior"
+                        >
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <input
+                            type="month"
+                            x-model="periodoMes"
+                            @change="onCambioPeriodoInput()"
+                            class="bg-transparent px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none cursor-pointer"
+                        />
+                        <button
+                            type="button"
+                            @click="cambiarPeriodo(1)"
+                            class="clay-btn clay-btn-secondary px-2.5 py-2 !rounded-xl"
+                            title="Mes siguiente"
+                        >
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="abrirCarpetaPDFs()"
+                        class="clay-btn clay-btn-secondary px-4 py-2.5 text-sm"
+                    >
+                        <i data-lucide="folder-open" class="w-4 h-4 text-[#0078D4]"></i>
+                        <span>Abrir Carpeta de PDFs</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="crearRespaldoManual()"
+                        :disabled="cargandoAccion"
+                        class="clay-btn clay-btn-secondary px-3.5 py-2.5 text-sm"
+                        title="Crear copia de seguridad de la base de datos"
+                    >
+                        <i data-lucide="database-backup" class="w-4 h-4 text-emerald-700"></i>
+                        <span>Crear Respaldo</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="apagarSistema()"
+                        :disabled="cargandoAccion"
+                        class="clay-btn clay-btn-secondary px-3.5 py-2.5 text-sm text-rose-700 hover:bg-rose-50"
+                        title="Guardar respaldo y cerrar el programa"
+                    >
+                        <i data-lucide="power" class="w-4 h-4 text-rose-600"></i>
+                        <span>Cerrar App</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navegación por Pestañas -->
+            <nav class="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-slate-200/70">
+                <button
+                    type="button"
+                    @click="cambiarPestana('tablero')"
+                    :class="pestanaActiva === 'tablero' ? 'clay-tab active' : 'clay-tab'"
+                    class="flex items-center gap-2"
+                >
+                    <i data-lucide="layout-list" class="w-4 h-4"></i>
+                    <span>Tablero Mensual</span>
+                </button>
+                <button
+                    type="button"
+                    @click="cambiarPestana('clientes')"
+                    :class="pestanaActiva === 'clientes' ? 'clay-tab active' : 'clay-tab'"
+                    class="flex items-center gap-2"
+                >
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span>Directorio de Clientes</span>
+                </button>
+                <button
+                    type="button"
+                    @click="cambiarPestana('perfil')"
+                    :class="pestanaActiva === 'perfil' ? 'clay-tab active' : 'clay-tab'"
+                    class="flex items-center gap-2"
+                >
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Mis Datos y Documentos</span>
+                </button>
+            </nav>
+        </header>
+
+        <!-- =================================================================
+             PESTAÑA 1: TABLERO MENSUAL Y TO-DO LIST
+             ================================================================= -->
+        <main x-show="pestanaActiva === 'tablero'" x-cloak class="space-y-6">
+
+            <!-- Panel de 4 Tarjetas KPI Claymórficas -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                <!-- Recaudado -->
+                <div class="clay-card p-5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                            Recaudado en el Mes
+                        </span>
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                            <i data-lucide="wallet" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <p
+                        class="text-2xl sm:text-3xl font-bold text-slate-900 mt-3 tabular-nums"
+                        x-text="formatearMonedaCOP(tablero.kpis.total_recaudado_mes)"
+                    ></p>
+                    <p class="text-xs text-slate-500 mt-1" x-text="formatearPeriodoLegible(periodoMes)"></p>
+                </div>
+
+                <!-- Por Cobrar -->
+                <div class="clay-card p-5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-[#0078D4]">
+                            Por Cobrar este Mes
+                        </span>
+                        <div class="w-9 h-9 rounded-xl bg-blue-100 text-[#0078D4] flex items-center justify-center">
+                            <i data-lucide="clock" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <p
+                        class="text-2xl sm:text-3xl font-bold text-slate-900 mt-3 tabular-nums"
+                        x-text="formatearMonedaCOP(tablero.kpis.total_por_cobrar_mes)"
+                    ></p>
+                    <p class="text-xs text-slate-500 mt-1">Cuentas emitidas esperando pago</p>
+                </div>
+
+                <!-- Pendientes por Redactar -->
+                <div class="clay-card p-5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-amber-700">
+                            Pendientes por Redactar
+                        </span>
+                        <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                            <i data-lucide="file-pen-line" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <p
+                        class="text-2xl sm:text-3xl font-bold text-slate-900 mt-3 tabular-nums"
+                        x-text="tablero.kpis.pendientes_por_redactar"
+                    ></p>
+                    <p class="text-xs text-slate-500 mt-1">Clientes recurrentes en borrador</p>
+                </div>
+
+                <!-- Cartera Vencida -->
+                <div
+                    class="clay-card p-5 transition-all"
+                    :class="Number(tablero.kpis.total_cartera_vencida_historica) > 0 ? 'clay-card-coral pulse-alert' : ''"
+                >
+                    <div class="flex items-center justify-between">
+                        <span
+                            class="text-xs font-bold uppercase tracking-wider"
+                            :class="Number(tablero.kpis.total_cartera_vencida_historica) > 0 ? 'text-rose-700' : 'text-slate-500'"
+                        >
+                            Cartera Vencida
+                        </span>
+                        <div
+                            class="w-9 h-9 rounded-xl flex items-center justify-center"
+                            :class="Number(tablero.kpis.total_cartera_vencida_historica) > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'"
+                        >
+                            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                    <p
+                        class="text-2xl sm:text-3xl font-bold mt-3 tabular-nums"
+                        :class="Number(tablero.kpis.total_cartera_vencida_historica) > 0 ? 'text-rose-700' : 'text-slate-900'"
+                        x-text="formatearMonedaCOP(tablero.kpis.total_cartera_vencida_historica)"
+                    ></p>
+                    <p class="text-xs text-slate-500 mt-1">Meses anteriores sin pagar</p>
+                </div>
+            </section>
+
+            <!-- Banda de Alerta de Cartera Vencida -->
+            <section
+                x-show="(tablero.cartera_vencida || []).length > 0"
+                x-cloak
+                class="clay-card clay-card-coral p-5 sm:p-6 space-y-4"
+            >
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center">
+                        <i data-lucide="bell-ring" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-rose-900">
+                            Atención: Cuentas de meses anteriores sin pagar
+                        </h2>
+                        <p class="text-xs sm:text-sm text-rose-700">
+                            Puedes revisar el documento o registrar el pago directamente desde aquí sin cambiar de mes.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <template x-for="mora in tablero.cartera_vencida" :key="'mora-' + mora.id">
+                        <div class="clay-card-sm px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div class="flex flex-wrap items-center gap-2.5">
+                                <span class="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-100 text-rose-800 tabular-nums" x-text="mora.periodo_mes"></span>
+                                <span class="px-2.5 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 tabular-nums" x-text="mora.consecutivo"></span>
+                                <span class="font-bold text-slate-900" x-text="mora.cliente.nombre_razon_social"></span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="text-base font-bold text-rose-700 tabular-nums" x-text="formatearMonedaCOP(mora.valor_total)"></span>
+                                <button
+                                    type="button"
+                                    @click="verPdfCuenta(mora.id)"
+                                    class="clay-btn clay-btn-secondary px-3 py-1.5 text-xs"
+                                >
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                    <span>Ver PDF</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="togglePagoCuenta(mora)"
+                                    class="clay-btn clay-btn-success px-3.5 py-1.5 text-xs"
+                                >
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                    <span>Marcar Pagada</span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+            <!-- Barra de Acciones y Lista To-Do del Mes -->
+            <section class="clay-card p-5 sm:p-6 space-y-5">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            @click="iniciarMes()"
+                            :disabled="cargandoAccion"
+                            class="clay-btn clay-btn-primary px-5 py-2.5 text-sm"
+                        >
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>Iniciar Mes / Cargar Clientes Recurrentes</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="abrirModalManual()"
+                            class="clay-btn clay-btn-secondary px-4 py-2.5 text-sm"
+                        >
+                            <i data-lucide="plus" class="w-4 h-4 text-[#0078D4]"></i>
+                            <span>Nuevo Cobro Extraordinario</span>
+                        </button>
+                    </div>
+
+                    <!-- Filtros rápidos -->
+                    <div class="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl">
+                        <template x-for="f in [
+                            { id: 'TODAS', label: 'Todas' },
+                            { id: 'BORRADOR', label: 'Por Redactar' },
+                            { id: 'EMITIDA', label: 'Por Cobrar' },
+                            { id: 'PAGADA', label: 'Pagadas' }
+                        ]" :key="f.id">
+                            <button
+                                type="button"
+                                @click="filtroTodo = f.id"
+                                :class="filtroTodo === f.id ? 'bg-white text-[#0078D4] shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                                x-text="f.label"
+                            ></button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Lista Interactiva To-Do -->
+                <div class="space-y-3">
+                    <template x-if="cargandoTablero">
+                        <div class="text-center py-10 text-slate-500 text-sm">
+                            Cargando cuentas de cobro del mes...
+                        </div>
+                    </template>
+
+                    <template x-if="!cargandoTablero && cuentasFiltradas.length === 0">
+                        <div class="text-center py-12 px-4 rounded-3xl bg-slate-50/70 border border-dashed border-slate-300">
+                            <i data-lucide="inbox" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
+                            <p class="font-semibold text-slate-700">
+                                No hay cuentas de cobro en esta vista para <span x-text="formatearPeriodoLegible(periodoMes)"></span>.
+                            </p>
+                            <p class="text-sm text-slate-500 mt-1">
+                                Haz clic en "Iniciar Mes / Cargar Clientes Recurrentes" o crea un cobro extraordinario.
+                            </p>
+                        </div>
+                    </template>
+
+                    <template x-for="cuenta in cuentasFiltradas" :key="cuenta.id">
+                        <div
+                            class="clay-card-sm p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+                            :class="cuenta.estado === 'PAGADA' ? 'todo-row-paid' : ''"
+                        >
+                            <!-- Izquierda: Checkbox + Info -->
+                            <div class="flex items-start gap-4 flex-1 min-w-0">
+                                <button
+                                    type="button"
+                                    @click="togglePagoCuenta(cuenta)"
+                                    :disabled="cuenta.estado === 'BORRADOR'"
+                                    :class="cuenta.estado === 'PAGADA' ? 'clay-checkbox checked' : 'clay-checkbox'"
+                                    :title="cuenta.estado === 'BORRADOR' ? 'Primero redacta los honorarios' : (cuenta.estado === 'PAGADA' ? 'Desmarcar pago' : 'Marcar como pagada')"
+                                    class="mt-0.5"
+                                >
+                                    <i x-show="cuenta.estado === 'PAGADA'" data-lucide="check" class="w-4 h-4 stroke-[3]"></i>
+                                </button>
+
+                                <div class="min-w-0 flex-1 space-y-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h3
+                                            class="text-base font-bold text-slate-900 truncate"
+                                            :class="cuenta.estado === 'PAGADA' ? 'todo-strike' : ''"
+                                            x-text="cuenta.cliente.nombre_razon_social"
+                                        ></h3>
+
+                                        <span
+                                            class="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                                            :class="cuenta.cliente.tipo_persona === 'JURIDICA' ? 'bg-indigo-50 text-indigo-700' : 'bg-sky-50 text-sky-700'"
+                                            x-text="cuenta.cliente.tipo_persona === 'JURIDICA' ? ('Empresa · NIT ' + cuenta.cliente.documento_nit) : ('Persona Natural · C.C. ' + cuenta.cliente.documento_nit)"
+                                        ></span>
+
+                                        <template x-if="cuenta.consecutivo">
+                                            <span
+                                                class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 tabular-nums"
+                                                x-text="cuenta.consecutivo"
+                                            ></span>
+                                        </template>
+                                    </div>
+
+                                    <template x-if="cuenta.concepto_honorarios">
+                                        <p
+                                            class="text-sm text-slate-600 line-clamp-2 whitespace-pre-line"
+                                            :class="cuenta.estado === 'PAGADA' ? 'todo-strike' : ''"
+                                            x-text="cuenta.concepto_honorarios"
+                                        ></p>
+                                    </template>
+                                    <template x-if="!cuenta.concepto_honorarios">
+                                        <p class="text-sm text-amber-700 italic">
+                                            Haz clic en "Redactar Honorarios" para generar la cuenta de este mes.
+                                        </p>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Derecha: Valor + Acciones -->
+                            <div class="flex flex-wrap items-center justify-between lg:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                                <div class="text-left lg:text-right mr-2">
+                                    <p
+                                        class="text-lg sm:text-xl font-bold tabular-nums"
+                                        :class="cuenta.estado === 'PAGADA' ? 'text-emerald-700 todo-strike' : 'text-slate-900'"
+                                        x-text="formatearMonedaCOP(cuenta.valor_total)"
+                                    ></p>
+                                    <template x-if="cuenta.estado === 'PAGADA' && cuenta.fecha_pago">
+                                        <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                                            <span x-text="'Pagada el ' + formatearFechaCorta(cuenta.fecha_pago)"></span>
+                                        </span>
+                                    </template>
+                                </div>
+
+                                <!-- Acciones BORRADOR -->
+                                <template x-if="cuenta.estado === 'BORRADOR'">
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            @click="abrirModalEmitir(cuenta)"
+                                            class="clay-btn clay-btn-primary px-4 py-2 text-xs sm:text-sm"
+                                        >
+                                            <i data-lucide="pen-line" class="w-4 h-4"></i>
+                                            <span>Redactar Honorarios</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="eliminarBorrador(cuenta)"
+                                            class="clay-btn clay-btn-danger-ghost p-2"
+                                            title="Eliminar borrador de este mes"
+                                        >
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <!-- Acciones EMITIDA -->
+                                <template x-if="cuenta.estado === 'EMITIDA'">
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            @click="abrirModalEmitir(cuenta)"
+                                            class="clay-btn clay-btn-secondary px-3.5 py-2 text-xs sm:text-sm"
+                                        >
+                                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                            <span>Editar</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="verPdfCuenta(cuenta.id)"
+                                            class="clay-btn clay-btn-primary px-4 py-2 text-xs sm:text-sm"
+                                        >
+                                            <i data-lucide="file-down" class="w-4 h-4"></i>
+                                            <span>Ver / Descargar PDF</span>
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <!-- Acciones PAGADA -->
+                                <template x-if="cuenta.estado === 'PAGADA'">
+                                    <button
+                                        type="button"
+                                        @click="verPdfCuenta(cuenta.id)"
+                                        class="clay-btn clay-btn-secondary px-3.5 py-2 text-xs sm:text-sm"
+                                    >
+                                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                                        <span>Ver PDF</span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </main>
+
+        <!-- =================================================================
+             PESTAÑA 2: DIRECTORIO DE CLIENTES
+             ================================================================= -->
+        <section x-show="pestanaActiva === 'clientes'" x-cloak class="space-y-6">
+            <div class="clay-card p-5 sm:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="relative flex-1 max-w-md">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input
+                        type="text"
+                        x-model="busquedaClientes"
+                        @input.debounce.250ms="cargarClientes()"
+                        placeholder="Buscar por nombre, razón social o NIT/C.C..."
+                        class="clay-input pl-10 text-sm"
+                    />
+                </div>
+
+                <div class="flex flex-wrap items-center gap-4">
+                    <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            x-model="mostrarInactivos"
+                            @change="cargarClientes()"
+                            class="rounded border-slate-300 text-[#0078D4] focus:ring-[#0078D4]"
+                        />
+                        <span>Mostrar archivados</span>
+                    </label>
+                    <button
+                        type="button"
+                        @click="abrirModalNuevoCliente()"
+                        class="clay-btn clay-btn-primary px-5 py-2.5 text-sm"
+                    >
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span>Registrar Nuevo Cliente</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                <template x-for="cliente in clientes" :key="cliente.id">
+                    <div
+                        class="clay-card p-5 flex flex-col justify-between gap-4"
+                        :class="!cliente.activo ? 'opacity-65' : ''"
+                    >
+                        <div class="space-y-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-11 h-11 rounded-2xl flex items-center justify-center"
+                                        :class="cliente.tipo_persona === 'JURIDICA' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700'"
+                                    >
+                                        <i :data-lucide="cliente.tipo_persona === 'JURIDICA' ? 'building-2' : 'user'" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-slate-900 leading-snug" x-text="cliente.nombre_razon_social"></h3>
+                                        <p
+                                            class="text-xs font-semibold text-slate-500 tabular-nums"
+                                            x-text="(cliente.tipo_persona === 'JURIDICA' ? 'NIT: ' : 'C.C.: ') + cliente.documento_nit"
+                                        ></p>
+                                    </div>
+                                </div>
+                                <span
+                                    x-show="!cliente.activo"
+                                    class="px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-200 text-slate-600"
+                                >Archivado</span>
+                            </div>
+
+                            <div class="text-xs text-slate-600 space-y-1">
+                                <p class="flex items-center gap-1.5">
+                                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span x-text="cliente.ciudad + (cliente.direccion ? ' · ' + cliente.direccion : '')"></span>
+                                </p>
+                                <p x-show="cliente.correo_contacto" class="flex items-center gap-1.5">
+                                    <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i>
+                                    <span x-text="cliente.correo_contacto"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-200/70 flex items-center justify-between gap-3">
+                            <!-- Switch Recurrente -->
+                            <div class="flex items-center gap-2.5">
+                                <button
+                                    type="button"
+                                    @click="toggleRecurrenteCliente(cliente)"
+                                    :class="cliente.es_recurrente ? 'clay-switch active' : 'clay-switch'"
+                                    role="switch"
+                                    :aria-checked="cliente.es_recurrente"
+                                >
+                                    <span class="clay-switch-thumb"></span>
+                                </button>
+                                <span class="text-xs font-semibold text-slate-700">Recurrente mensual</span>
+                            </div>
+
+                            <div class="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    @click="abrirModalEditarCliente(cliente)"
+                                    class="clay-btn clay-btn-secondary px-3 py-1.5 text-xs"
+                                >
+                                    Editar
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="toggleActivoCliente(cliente)"
+                                    class="clay-btn clay-btn-secondary px-3 py-1.5 text-xs"
+                                    x-text="cliente.activo ? 'Archivar' : 'Activar'"
+                                ></button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             PESTAÑA 3: MIS DATOS Y DOCUMENTOS LEGALES
+             ================================================================= -->
+        <section x-show="pestanaActiva === 'perfil'" x-cloak class="space-y-6">
+            <form @submit.prevent="guardarEmisor()" class="space-y-6">
+                <!-- Tarjeta 1: Datos Personales y Bancarios -->
+                <div class="clay-card p-6 space-y-5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-100 text-[#0078D4] flex items-center justify-center">
+                            <i data-lucide="id-card" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Datos Personales y Bancarios</h2>
+                            <p class="text-xs text-slate-500">Esta información aparecerá en el encabezado y bloque de pago de cada PDF.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Nombre Completo</label>
+                            <input type="text" x-model="emisor.nombre_completo" required class="clay-input text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Tipo de Documento</label>
+                            <select x-model="emisor.tipo_documento" class="clay-input text-sm">
+                                <option value="C.C.">C.C.</option>
+                                <option value="C.E.">C.E.</option>
+                                <option value="Pasaporte">Pasaporte</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Número de Documento</label>
+                            <input type="text" x-model="emisor.numero_documento" required class="clay-input text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">RUT</label>
+                            <input type="text" x-model="emisor.rut" required class="clay-input text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Ciudad</label>
+                            <input type="text" x-model="emisor.ciudad" required class="clay-input text-sm" />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Dirección</label>
+                            <input type="text" x-model="emisor.direccion" required class="clay-input text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Teléfono</label>
+                            <input type="text" x-model="emisor.telefono" required class="clay-input text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Correo Electrónico</label>
+                            <input type="email" x-model="emisor.correo" required class="clay-input text-sm" />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Banco</label>
+                            <input type="text" x-model="emisor.banco" required class="clay-input text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Tipo de Cuenta</label>
+                            <select x-model="emisor.tipo_cuenta" class="clay-input text-sm">
+                                <option value="Ahorros">Ahorros</option>
+                                <option value="Corriente">Corriente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Número de Cuenta</label>
+                            <input type="text" x-model="emisor.numero_cuenta" required class="clay-input text-sm tabular-nums" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta 2: Notas Tributarias (Colombia) -->
+                <div class="clay-card p-6 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                            <i data-lucide="scale" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Declaraciones Tributarias (Colombia)</h2>
+                            <p class="text-xs text-slate-500">Textos legales incluidos automáticamente al pie de cada Cuenta de Cobro.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Nota Legal de IVA</label>
+                            <textarea rows="3" x-model="emisor.nota_legal_iva" required class="clay-input text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">Nota Retención en la Fuente (Art. 383 E.T.)</label>
+                            <textarea rows="3" x-model="emisor.nota_retencion" required class="clay-input text-sm"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" :disabled="cargandoAccion" class="clay-btn clay-btn-primary px-6 py-2.5 text-sm">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            <span>Guardar Mis Datos y Notas Legales</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Tarjeta 3: Firma Digital y Anexos PDF -->
+            <div class="clay-card p-6 space-y-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="paperclip" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Firma Digital y Anexos PDF</h2>
+                        <p class="text-xs text-slate-500">Sube tu firma escaneada y tus soportes en PDF para adjuntarlos automáticamente.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <!-- Firma -->
+                    <label class="clay-dropzone p-5 flex flex-col items-center justify-center text-center cursor-pointer gap-3">
+                        <input type="file" accept=".png,.jpg,.jpeg" @change="subirArchivoEmisor('firma', $event)" class="hidden" />
+                        <template x-if="emisor.ruta_firma">
+                            <img
+                                :src="'/assets/' + extraerNombreArchivo(emisor.ruta_firma) + '?v=' + firmaCacheBust"
+                                alt="Vista previa de firma"
+                                class="max-h-16 object-contain rounded-lg bg-white p-1 shadow-sm"
+                            />
+                        </template>
+                        <template x-if="!emisor.ruta_firma">
+                            <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0078D4] flex items-center justify-center">
+                                <i data-lucide="pen-tool" class="w-5 h-5"></i>
+                            </div>
+                        </template>
+                        <div>
+                            <p class="text-sm font-bold text-slate-800">Firma Escaneada (.png / .jpg)</p>
+                            <p class="text-xs text-slate-500 mt-0.5" x-text="emisor.ruta_firma ? 'Archivo cargado · Clic para reemplazar' : 'Haz clic para seleccionar imagen'"></p>
+                        </div>
+                    </label>
+
+                    <!-- RUT -->
+                    <label class="clay-dropzone p-5 flex flex-col items-center justify-center text-center cursor-pointer gap-3">
+                        <input type="file" accept=".pdf" @change="subirArchivoEmisor('rut', $event)" class="hidden" />
+                        <div
+                            class="w-11 h-11 rounded-2xl flex items-center justify-center"
+                            :class="emisor.ruta_rut_pdf ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+                        >
+                            <i :data-lucide="emisor.ruta_rut_pdf ? 'file-check' : 'file-up'" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-800">RUT Actualizado (.pdf)</p>
+                            <span
+                                x-show="emisor.ruta_rut_pdf"
+                                class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800"
+                            >Cargado y listo</span>
+                            <p x-show="!emisor.ruta_rut_pdf" class="text-xs text-slate-500 mt-0.5">Haz clic para subir PDF</p>
+                        </div>
+                    </label>
+
+                    <!-- Certificación Bancaria -->
+                    <label class="clay-dropzone p-5 flex flex-col items-center justify-center text-center cursor-pointer gap-3">
+                        <input type="file" accept=".pdf" @change="subirArchivoEmisor('cert_bancaria', $event)" class="hidden" />
+                        <div
+                            class="w-11 h-11 rounded-2xl flex items-center justify-center"
+                            :class="emisor.ruta_cert_bancaria_pdf ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'"
+                        >
+                            <i :data-lucide="emisor.ruta_cert_bancaria_pdf ? 'file-check' : 'landmark'" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-800">Certificación Bancaria (.pdf)</p>
+                            <span
+                                x-show="emisor.ruta_cert_bancaria_pdf"
+                                class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800"
+                            >Cargada y lista</span>
+                            <p x-show="!emisor.ruta_cert_bancaria_pdf" class="text-xs text-slate-500 mt-0.5">Haz clic para subir PDF</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- =====================================================================
+         MODAL: REDACCIÓN Y EMISIÓN DE HONORARIOS
+         ===================================================================== -->
+    <div
+        x-show="modalCuentaAbierto"
+        x-cloak
+        class="fixed inset-0 z-50 clay-modal-backdrop flex items-center justify-center p-4 overflow-y-auto"
+    >
+        <div
+            @click.away="modalCuentaAbierto = false"
+            class="clay-card w-full max-w-2xl p-6 sm:p-7 space-y-5 my-8"
+        >
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">
+                        <span x-show="modalCuentaModo === 'manual'">Nuevo Cobro Extraordinario</span>
+                        <span x-show="modalCuentaModo !== 'manual'" x-text="'Redactar Cuenta de Cobro — ' + cuentaForm.cliente_nombre"></span>
+                    </h2>
+                    <p
+                        x-show="modalCuentaModo !== 'manual'"
+                        class="text-xs font-semibold text-slate-500 mt-0.5"
+                        x-text="(cuentaForm.cliente_tipo_persona === 'JURIDICA' ? 'NIT: ' : 'C.C.: ') + cuentaForm.cliente_documento + ' · Periodo ' + formatearPeriodoLegible(periodoMes)"
+                    ></p>
+                </div>
+                <button type="button" @click="modalCuentaAbierto = false" class="clay-btn clay-btn-secondary p-2 !rounded-xl">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Selector de Cliente si es Cobro Manual -->
+            <div x-show="modalCuentaModo === 'manual'">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Cliente</label>
+                <select
+                    x-model="cuentaForm.cliente_id"
+                    @change="onSeleccionarClienteManual()"
+                    class="clay-input text-sm"
+                >
+                    <option value="">Selecciona un cliente...</option>
+                    <template x-for="c in clientes" :key="'opt-' + c.id">
+                        <option :value="c.id" x-text="c.nombre_razon_social + ' (' + c.documento_nit + ')'"></option>
+                    </template>
+                </select>
+            </div>
+
+            <!-- Fila Fecha y Valor COP -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Fecha de Expedición</label>
+                    <input type="date" x-model="cuentaForm.fecha_emision" class="clay-input text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Valor Total (COP)</label>
+                    <input
+                        type="text"
+                        inputmode="numeric"
+                        :value="cuentaForm.valor_digitos"
+                        @input="onInputValorHonorarios($event)"
+                        placeholder="Ej: 2500000"
+                        class="clay-input text-base font-bold tabular-nums"
+                    />
+                    <p class="text-xs font-bold text-[#0078D4] mt-1 tabular-nums">
+                        Vista previa: <span x-text="valorVistaPreviaCOP"></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- TextBox Protagonista de Honorarios -->
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">Concepto de Honorarios</label>
+                    <button
+                        type="button"
+                        x-show="conceptoMesPasado"
+                        @click="copiarHonorariosMesPasado()"
+                        class="text-xs font-semibold text-[#0078D4] hover:underline flex items-center gap-1"
+                    >
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        <span>Copiar honorarios del mes pasado</span>
+                    </button>
+                </div>
+                <textarea
+                    rows="6"
+                    x-model="cuentaForm.concepto_honorarios"
+                    placeholder="Ej: Prestación de servicios profesionales de asesoría y soporte técnico correspondientes al mes de diciembre de 2026, incluyendo..."
+                    class="clay-input text-[15px] leading-relaxed"
+                ></textarea>
+            </div>
+
+            <!-- Checkbox de Anexos -->
+            <label class="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
+                <input
+                    type="checkbox"
+                    x-model="cuentaForm.incluir_anexos"
+                    class="w-4 h-4 rounded border-slate-300 text-[#0078D4] focus:ring-[#0078D4]"
+                />
+                <span>Adjuntar automáticamente RUT y Certificación Bancaria al final del PDF</span>
+            </label>
+
+            <!-- Pie del Modal -->
+            <div class="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-slate-200/70">
+                <button
+                    type="button"
+                    @click="modalCuentaAbierto = false"
+                    class="clay-btn clay-btn-secondary px-5 py-2.5 text-sm"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="button"
+                    @click="guardarYGenerarPDF()"
+                    :disabled="cargandoAccion"
+                    class="clay-btn clay-btn-primary px-6 py-2.5 text-sm"
+                >
+                    <i data-lucide="file-check" class="w-4 h-4"></i>
+                    <span x-text="cargandoAccion ? 'Generando PDF...' : 'Guardar y Generar PDF'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL: CREAR / EDITAR CLIENTE
+         ===================================================================== -->
+    <div
+        x-show="modalClienteAbierto"
+        x-cloak
+        class="fixed inset-0 z-50 clay-modal-backdrop flex items-center justify-center p-4 overflow-y-auto"
+    >
+        <div
+            @click.away="modalClienteAbierto = false"
+            class="clay-card w-full max-w-xl p-6 sm:p-7 space-y-5 my-8"
+        >
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-bold text-slate-900" x-text="clienteEditandoId ? 'Editar Cliente' : 'Registrar Nuevo Cliente'"></h2>
+                <button type="button" @click="modalClienteAbierto = false" class="clay-btn clay-btn-secondary p-2 !rounded-xl">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Selector Visual Tipo Persona -->
+            <div class="grid grid-cols-2 gap-3">
+                <button
+                    type="button"
+                    @click="clienteForm.tipo_persona = 'JURIDICA'"
+                    :class="clienteForm.tipo_persona === 'JURIDICA' ? 'border-[#0078D4] bg-blue-50/70 text-[#0078D4]' : 'border-slate-200 bg-white/70 text-slate-600'"
+                    class="p-3.5 rounded-2xl border-2 flex items-center gap-3 font-semibold text-sm transition-all"
+                >
+                    <i data-lucide="building-2" class="w-5 h-5"></i>
+                    <span>Empresa (NIT)</span>
+                </button>
+                <button
+                    type="button"
+                    @click="clienteForm.tipo_persona = 'NATURAL'"
+                    :class="clienteForm.tipo_persona === 'NATURAL' ? 'border-[#0078D4] bg-blue-50/70 text-[#0078D4]' : 'border-slate-200 bg-white/70 text-slate-600'"
+                    class="p-3.5 rounded-2xl border-2 flex items-center gap-3 font-semibold text-sm transition-all"
+                >
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                    <span>Persona Natural (C.C.)</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Nombre o Razón Social</label>
+                    <input type="text" x-model="clienteForm.nombre_razon_social" required class="clay-input text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5" x-text="clienteForm.tipo_persona === 'JURIDICA' ? 'NIT (con dígito)' : 'Número de Cédula'"></label>
+                    <input type="text" x-model="clienteForm.documento_nit" required class="clay-input text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Ciudad</label>
+                    <input type="text" x-model="clienteForm.ciudad" class="clay-input text-sm" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Dirección</label>
+                    <input type="text" x-model="clienteForm.direccion" class="clay-input text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Correo de Contacto</label>
+                    <input type="email" x-model="clienteForm.correo_contacto" class="clay-input text-sm" />
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Teléfono</label>
+                    <input type="text" x-model="clienteForm.telefono" class="clay-input text-sm" />
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <div class="flex items-center gap-2.5">
+                    <button
+                        type="button"
+                        @click="clienteForm.es_recurrente = !clienteForm.es_recurrente"
+                        :class="clienteForm.es_recurrente ? 'clay-switch active' : 'clay-switch'"
+                    >
+                        <span class="clay-switch-thumb"></span>
+                    </button>
+                    <span class="text-sm font-semibold text-slate-700">Incluir automáticamente cada mes</span>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-200/70">
+                <button type="button" @click="modalClienteAbierto = false" class="clay-btn clay-btn-secondary px-5 py-2.5 text-sm">
+                    Cancelar
+                </button>
+                <button type="button" @click="guardarCliente()" :disabled="cargandoAccion" class="clay-btn clay-btn-primary px-6 py-2.5 text-sm">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    <span>Guardar Cliente</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         NOTIFICACIONES TOAST (ESTILO WINDOWS 11)
+         ===================================================================== -->
+    <div class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div
+                class="clay-card px-4 py-3.5 flex items-center gap-3 pointer-events-auto border-l-4"
+                :class="{
+                    'border-l-emerald-600': toast.tipo === 'success',
+                    'border-l-rose-600': toast.tipo === 'error',
+                    'border-l-[#0078D4]': toast.tipo === 'info'
+                }"
+            >
+                <i
+                    :data-lucide="toast.tipo === 'success' ? 'check-circle-2' : (toast.tipo === 'error' ? 'alert-circle' : 'info')"
+                    class="w-5 h-5 shrink-0"
+                    :class="{
+                        'text-emerald-600': toast.tipo === 'success',
+                        'text-rose-600': toast.tipo === 'error',
+                        'text-[#0078D4]': toast.tipo === 'info'
+                    }"
+                ></i>
+                <p class="text-sm font-medium text-slate-800" x-text="toast.mensaje"></p>
+            </div>
+        </template>
+    </div>
+
+</body>
+</html>

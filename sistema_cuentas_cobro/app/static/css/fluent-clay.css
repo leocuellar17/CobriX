@@ -1,0 +1,318 @@
+/* ==========================================================================
+   CobriX Design System: Microsoft Fluent 2 (Mica) + Claymorfismo Refinado
+   ========================================================================== */
+
+:root {
+    --mica-bg: #F0F4F9;
+    --fluent-blue: #0078D4;
+    --fluent-blue-hover: #106EBE;
+    --fluent-emerald: #0F7B0F;
+    --fluent-amber: #C27D0E;
+    --fluent-coral: #D13438;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+body {
+    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-primary);
+    background-color: var(--mica-bg);
+    background-image:
+        radial-gradient(at 10% 8%, rgba(0, 120, 212, 0.08) 0px, transparent 50%),
+        radial-gradient(at 90% 15%, rgba(135, 100, 184, 0.06) 0px, transparent 48%),
+        radial-gradient(at 50% 95%, rgba(0, 120, 212, 0.04) 0px, transparent 55%);
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
+.tabular-nums {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Superficies Claymórficas */
+.clay-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow:
+        0 14px 28px -6px rgba(15, 23, 42, 0.07),
+        0 4px 10px -2px rgba(15, 23, 42, 0.04),
+        inset 0 2px 3px rgba(255, 255, 255, 0.95),
+        inset 0 -3px 6px rgba(148, 163, 184, 0.14);
+}
+
+.clay-card-sm {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+        0 8px 18px -4px rgba(15, 23, 42, 0.06),
+        0 2px 6px -1px rgba(15, 23, 42, 0.03),
+        inset 0 2px 2px rgba(255, 255, 255, 0.95),
+        inset 0 -2px 4px rgba(148, 163, 184, 0.12);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.25s ease;
+}
+
+.clay-card-sm:hover {
+    box-shadow:
+        0 12px 22px -5px rgba(15, 23, 42, 0.09),
+        0 4px 8px -2px rgba(15, 23, 42, 0.05),
+        inset 0 2px 3px rgba(255, 255, 255, 0.98),
+        inset 0 -2px 5px rgba(148, 163, 184, 0.16);
+}
+
+/* Alerta de Cartera Vencida */
+.clay-card-coral {
+    background: rgba(255, 248, 248, 0.92);
+    border: 1.5px solid rgba(209, 52, 56, 0.35);
+    box-shadow:
+        0 14px 28px -6px rgba(209, 52, 56, 0.12),
+        0 4px 10px -2px rgba(209, 52, 56, 0.06),
+        inset 0 2px 3px rgba(255, 255, 255, 0.95),
+        inset 0 -3px 6px rgba(209, 52, 56, 0.08);
+}
+
+@keyframes subtlePulse {
+    0%, 100% {
+        box-shadow:
+            0 14px 28px -6px rgba(209, 52, 56, 0.12),
+            0 0 0 0 rgba(209, 52, 56, 0.25),
+            inset 0 2px 3px rgba(255, 255, 255, 0.95);
+    }
+    50% {
+        box-shadow:
+            0 14px 28px -6px rgba(209, 52, 56, 0.18),
+            0 0 0 6px rgba(209, 52, 56, 0),
+            inset 0 2px 3px rgba(255, 255, 255, 0.95);
+    }
+}
+
+.pulse-alert {
+    animation: subtlePulse 2.8s infinite;
+}
+
+/* Botones Táctiles 3D Suaves */
+.clay-btn {
+    border-radius: 16px;
+    font-weight: 600;
+    transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.clay-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.clay-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.clay-btn-primary {
+    background-color: var(--fluent-blue);
+    color: #ffffff;
+    box-shadow:
+        0 8px 16px -4px rgba(0, 120, 212, 0.35),
+        inset 0 2px 2px rgba(255, 255, 255, 0.35),
+        inset 0 -3px 5px rgba(0, 0, 0, 0.18);
+}
+
+.clay-btn-primary:hover:not(:disabled) {
+    background-color: var(--fluent-blue-hover);
+}
+
+.clay-btn-secondary {
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--text-primary);
+    border: 1px solid rgba(203, 213, 225, 0.7);
+    box-shadow:
+        0 6px 14px -4px rgba(15, 23, 42, 0.08),
+        inset 0 2px 2px rgba(255, 255, 255, 0.95),
+        inset 0 -2px 4px rgba(148, 163, 184, 0.16);
+}
+
+.clay-btn-secondary:hover:not(:disabled) {
+    background: #ffffff;
+}
+
+.clay-btn-success {
+    background-color: #107C10;
+    color: #ffffff;
+    box-shadow:
+        0 8px 16px -4px rgba(16, 124, 16, 0.3),
+        inset 0 2px 2px rgba(255, 255, 255, 0.32),
+        inset 0 -3px 5px rgba(0, 0, 0, 0.18);
+}
+
+.clay-btn-success:hover:not(:disabled) {
+    background-color: #0B6A0B;
+}
+
+.clay-btn-danger-ghost {
+    background: transparent;
+    color: #94A3B8;
+    border-radius: 12px;
+}
+
+.clay-btn-danger-ghost:hover:not(:disabled) {
+    background: rgba(209, 52, 56, 0.1);
+    color: #D13438;
+}
+
+/* Inputs Moldeados */
+.clay-input {
+    width: 100%;
+    background: #F8FAFC;
+    border: 1px solid rgba(203, 213, 225, 0.85);
+    border-radius: 16px;
+    padding: 0.65rem 0.95rem;
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 2px 4px rgba(15, 23, 42, 0.06),
+        0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.clay-input:focus {
+    outline: none;
+    background: #FFFFFF;
+    border-color: var(--fluent-blue);
+    box-shadow:
+        0 0 0 3px rgba(0, 120, 212, 0.22),
+        inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* Checkbox Táctil Grande (28px x 28px) */
+.clay-checkbox {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 10px;
+    border: 2px solid #CBD5E1;
+    background: #F8FAFC;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow:
+        inset 0 2px 4px rgba(15, 23, 42, 0.08),
+        0 2px 4px rgba(15, 23, 42, 0.04);
+    transition: all 0.18s ease;
+}
+
+.clay-checkbox:hover:not(:disabled) {
+    border-color: var(--fluent-blue);
+}
+
+.clay-checkbox.checked {
+    background: #107C10;
+    border-color: #107C10;
+    color: #ffffff;
+    box-shadow:
+        0 4px 10px rgba(16, 124, 16, 0.28),
+        inset 0 2px 2px rgba(255, 255, 255, 0.3);
+}
+
+.clay-checkbox:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: #E2E8F0;
+}
+
+/* Efecto Tachado Suave para Cuentas Pagadas */
+.todo-row-paid {
+    opacity: 0.65;
+}
+
+.todo-strike {
+    text-decoration: line-through;
+    text-decoration-thickness: 2px;
+    text-decoration-color: #64748B;
+}
+
+/* Windows 11 Toggle Switch */
+.clay-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 9999px;
+    background: #CBD5E1;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.15);
+}
+
+.clay-switch.active {
+    background: var(--fluent-blue);
+}
+
+.clay-switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);
+    transition: transform 0.2s ease;
+}
+
+.clay-switch.active .clay-switch-thumb {
+    transform: translateX(20px);
+}
+
+/* Navegación por Pestañas Fluent */
+.clay-tab {
+    border-radius: 14px;
+    padding: 0.55rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.925rem;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.clay-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.clay-tab.active {
+    background: #FFFFFF;
+    color: var(--fluent-blue);
+    box-shadow:
+        0 6px 14px -4px rgba(15, 23, 42, 0.08),
+        inset 0 2px 2px rgba(255, 255, 255, 0.95);
+}
+
+/* Modal Backdrop */
+.clay-modal-backdrop {
+    background: rgba(15, 23, 42, 0.32);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Dropzone Fluent */
+.clay-dropzone {
+    border: 2px dashed #CBD5E1;
+    border-radius: 18px;
+    background: rgba(248, 250, 252, 0.85);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.clay-dropzone:hover {
+    border-color: var(--fluent-blue);
+    background: rgba(239, 246, 255, 0.7);
+}

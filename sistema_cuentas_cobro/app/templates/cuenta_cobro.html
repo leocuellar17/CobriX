@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Cuenta de Cobro {{ cuenta.consecutivo }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 2cm 2.2cm 2cm 2.2cm;
+            @frame footer_frame {
+                -pdf-frame-content: footer_content;
+                bottom: 0.7cm;
+                left: 2.2cm;
+                right: 2.2cm;
+                height: 0.8cm;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #1f2937;
+            line-height: 1.4;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 10px;
+        }
+
+        .doc-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            text-align: center;
+            letter-spacing: 0.5px;
+            margin: 0 0 6px 0;
+        }
+
+        .doc-subtitle {
+            font-size: 10pt;
+            color: #4b5563;
+            text-align: center;
+            margin: 0 0 10px 0;
+        }
+
+        .section-box {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        .party-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        .party-table td {
+            padding: 6px 8px;
+            vertical-align: top;
+            border: 1px solid #e5e7eb;
+        }
+
+        .party-label {
+            width: 26%;
+            font-weight: bold;
+            color: #111827;
+            background-color: #f9fafb;
+            font-size: 9.5pt;
+        }
+
+        .party-value {
+            width: 74%;
+            color: #1f2937;
+            font-size: 10pt;
+        }
+
+        .amount-box {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+        }
+
+        .amount-box td {
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            padding: 12px 14px;
+            font-size: 10.5pt;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .concept-header {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 4px;
+        }
+
+        .concept-body {
+            border: 1px solid #e5e7eb;
+            background-color: #ffffff;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            line-height: 1.5;
+            font-size: 10pt;
+            color: #1f2937;
+        }
+
+        .bank-title {
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .bank-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            font-size: 9.5pt;
+        }
+
+        .bank-table th {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            font-weight: bold;
+            text-align: left;
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .bank-table td {
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            color: #1f2937;
+        }
+
+        .legal-notes {
+            margin-top: 10px;
+            margin-bottom: 24px;
+            padding: 10px 12px;
+            background-color: #f9fafb;
+            border-left: 3px solid #9ca3af;
+            font-size: 8.5pt;
+            color: #374151;
+            line-height: 1.4;
+        }
+
+        .legal-notes p {
+            margin: 0 0 6px 0;
+        }
+
+        .legal-notes p:last-child {
+            margin-bottom: 0;
+        }
+
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 24px;
+        }
+
+        .signature-cell {
+            width: 55%;
+            vertical-align: bottom;
+        }
+
+        .signature-image-wrap {
+            height: 78px;
+            vertical-align: bottom;
+            padding-bottom: 4px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #111827;
+            padding-top: 6px;
+            font-size: 9.5pt;
+            color: #111827;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 8pt;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td>
+                <div class="doc-title">CUENTA DE COBRO No. {{ cuenta.consecutivo }}</div>
+                <div class="doc-subtitle">{{ emisor.ciudad }}, {{ fecha_formateada }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="party-table">
+        <tr>
+            <td class="party-label">DEBE A:</td>
+            <td class="party-value">
+                <strong>{{ emisor.nombre_completo }}</strong><br />
+                {{ emisor.tipo_documento }} {{ emisor.numero_documento }} | RUT: {{ emisor.rut }}
+            </td>
+        </tr>
+        <tr>
+            <td class="party-label">POR PARTE DE (DEUDOR):</td>
+            <td class="party-value">
+                <strong>{{ cliente.nombre_razon_social }}</strong><br />
+                {% if cliente.tipo_persona.value == "JURIDICA" %}
+                    NIT: {{ cliente.documento_nit }}
+                {% else %}
+                    C.C.: {{ cliente.documento_nit }}
+                {% endif %}
+                {% if cliente.direccion or cliente.ciudad %}
+                    <br />
+                    {% if cliente.direccion %}{{ cliente.direccion }}{% endif %}
+                    {% if cliente.direccion and cliente.ciudad %} - {% endif %}
+                    {% if cliente.ciudad %}{{ cliente.ciudad }}{% endif %}
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <table class="amount-box">
+        <tr>
+            <td>
+                LA SUMA DE: {{ valor_letras }} ({{ valor_formateado }})
+            </td>
+        </tr>
+    </table>
+
+    <div class="concept-header">Por concepto de:</div>
+    <div class="concept-body">
+        {{ cuenta.concepto_honorarios | replace('\n', '<br />') | safe }}
+    </div>
+
+    <div class="bank-title">Instrucciones para el pago</div>
+    <table class="bank-table">
+        <tr>
+            <th>Banco</th>
+            <th>Tipo de Cuenta</th>
+            <th>Número de Cuenta</th>
+            <th>Titular y Documento</th>
+        </tr>
+        <tr>
+            <td>{{ emisor.banco }}</td>
+            <td>{{ emisor.tipo_cuenta }}</td>
+            <td>{{ emisor.numero_cuenta }}</td>
+            <td>{{ emisor.nombre_completo }} ({{ emisor.tipo_documento }} {{ emisor.numero_documento }})</td>
+        </tr>
+    </table>
+
+    <div class="legal-notes">
+        <p>{{ emisor.nota_legal_iva }}</p>
+        <p>{{ emisor.nota_retencion }}</p>
+    </div>
+
+    <table class="signature-table">
+        <tr>
+            <td class="signature-cell">
+                {% if firma_base64 %}
+                <div class="signature-image-wrap">
+                    <img src="data:{{ firma_mime }};base64,{{ firma_base64 }}" style="max-height: 75px; max-width: 220px;" alt="Firma" />
+                </div>
+                {% else %}
+                <div class="signature-image-wrap">&nbsp;</div>
+                {% endif %}
+                <div class="signature-line">
+                    <strong>{{ emisor.nombre_completo }}</strong><br />
+                    {{ emisor.tipo_documento }} {{ emisor.numero_documento }}<br />
+                    Tel: {{ emisor.telefono }} | Correo: {{ emisor.correo }}
+                </div>
+            </td>
+            <td style="width: 45%;">&nbsp;</td>
+        </tr>
+    </table>
+
+    <div id="footer_content" class="footer-text">
+        Documento generado localmente - Página <pdf:pagenumber /> de <pdf:pagecount />
+    </div>
+</body>
+</html>
